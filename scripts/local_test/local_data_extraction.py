@@ -90,8 +90,8 @@ async def fetch_year(
                         timeout=timeout
                 ) as resp:
 
-                    # Handle server-side errors and rate limiting (Retry Status Codes)
-                    if resp.status in [429, 500, 502, 503, 504]:
+                    # Handle ALL Server Errors (5xx) and Rate Limiting (429) for retrying
+                    if resp.status == 429 or 500 <= resp.status <= 599:
                         logging.warning(
                             f"Year {year}: attempt {attempt}/{config.max_retries}, Status {resp.status}, waiting {delay:.1f}s…"
                         )
@@ -99,20 +99,20 @@ async def fetch_year(
                         delay = increase_delay(delay)
                         continue  # Go to next attempt
 
-                    # Handle permanent errors (e.g., 404 Not Found, 401 Unauthorized)
+                    # Handle permanent errors
                     if 400 <= resp.status < 500:
-                        resp.raise_for_status()  # This will raise a ClientResponseError and break the loop
+                        resp.raise_for_status()  # Will be caught by the outer exception handler
 
-                    # Success
-                    resp.raise_for_status()  # Ensure non-retryable errors (e.g., 200 but bad content) are caught
-                    data = await resp.json()
+                    # Success check
+                    if resp.ok:
+                        data = await resp.json()  # This may raise json.JSONDecodeError if content is bad
 
-                    save_local(data, filepath)
-                    logging.info(f"Fetched {year} successfully")
+                        save_local(data, filepath)
+                        logging.info(f"Fetched {year} successfully")
 
-                    # Add a mandatory, controlled micro-sleep after success so we don't hurt the API
-                    await asyncio.sleep(random.uniform(0.1, 0.5))
-                    return None  # Success
+                        # Add sleep after success in order to not stress the API
+                        await asyncio.sleep(random.uniform(0.1, 0.5))
+                        return None  # Success
 
         except aiohttp.ClientResponseError as e:
             # Catch specific errors like 404, 401, etc. They are permanent failures

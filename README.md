@@ -27,7 +27,7 @@ The project is built with the following technologies for local testing:
 - **Languages**: Python
 - **API**: Global Footprint Network API
 - **Database**: DuckDB (for local testing)
-- **Key Python Libraries**: `aiohttp`, `asyncio`, `polars`, `duckdb`
+- **Key Python Libraries**: `aiohttp`, `asyncio`, `polars`, `duckdb`, `logging`, `json`
 
 ## Project Structure
 

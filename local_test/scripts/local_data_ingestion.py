@@ -12,9 +12,9 @@ import polars as pl
 class IngestionConfig:
     """Stores all configuration settings for the data ingestion"""
 
-    raw_data_dir: Path = Path("local_storage/raw")
-    duckdb_path: Path = Path("local_storage/footprint.duckdb")
-    log_file: Path = Path("logs/local_data_ingestion.log")
+    raw_data_dir: Path = Path("../local_storage/raw")
+    duckdb_path: Path = Path("../local_storage/footprint.duckdb")
+    log_file: Path = Path("../logs/local_data_ingestion.log")
 
     # Column mapping for renaming during transformation
     column_mapping: Dict[str, str] = field(default_factory=lambda: {

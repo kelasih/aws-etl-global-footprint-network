@@ -17,8 +17,8 @@ class APIConfig:
 
     api_url: str
     api_key: str
-    raw_data_dir: Path = Path("local_storage/raw")
-    log_file: Path = Path("logs/local_data_extraction.log")
+    raw_data_dir: Path = Path("../local_storage/raw")
+    log_file: Path = Path("../logs/local_data_extraction.log")
     max_concurrent: int = 5  # Semaphore limit for API calls
     max_retries: int = 5
     initial_delay: float = 1.0  # Initial wait time for backoff
@@ -45,9 +45,9 @@ def setup_logging(log_file: Path):
 
 def increase_delay(delay: float) -> float:
     """Doubles the delay with exponential backoff, capped at 60 seconds"""
-    # Adds a small exponential + random delay between 0 and 1
+    # Adds a small exponential + random delay between 1 and 2
 
-    return min(delay * 2 * random.uniform(0.0, 1.0), 60.0)
+    return min(delay * 2 * random.uniform(1, 2), 60.0)
 
 def save_local(data: Dict[str, Any], filepath: Path):
     """Saves data to local storage"""
@@ -113,7 +113,7 @@ async def fetch_year(
                         logging.info(f"Fetched {year} successfully")
 
                         # Adds sleep after success in order to not stress the API
-                        await asyncio.sleep(random.uniform(0.1, 0.5))
+                        await asyncio.sleep(random.uniform(0.3, 0.7))
                         return None  # Success
 
         except aiohttp.ClientResponseError as e:

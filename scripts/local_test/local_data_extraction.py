@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Optional
 @dataclass # Used for holding our data, it auto implements important methods like __init__
 class APIConfig:
     """Stores all configuration settings for the API extraction"""
+
     api_url: str
     api_key: str
     raw_data_dir: Path = Path("local_storage/raw")
@@ -29,6 +30,7 @@ class APIConfig:
 # --- Logging Setup ---
 def setup_logging(log_file: Path):
     """Sets up the standardized logging configuration"""
+
     log_file.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
@@ -41,15 +43,15 @@ def setup_logging(log_file: Path):
     )
 
 
-# --- Core Utilities ---
 def increase_delay(delay: float) -> float:
     """Doubles the delay with exponential backoff, capped at 60 seconds"""
     # Adds a small exponential + random delay between 0 and 1
-    return min(delay * 2 * random.uniform(0.0, 1.0), 60.0)
 
+    return min(delay * 2 * random.uniform(0.0, 1.0), 60.0)
 
 def save_local(data: Dict[str, Any], filepath: Path):
     """Saves data to local storage"""
+
     try:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
@@ -58,7 +60,6 @@ def save_local(data: Dict[str, Any], filepath: Path):
         logging.error(f"Failed to save file {filepath}: {e}")
 
 
-# --- API Fetching Logic ---
 async def fetch_year(
         session: aiohttp.ClientSession,
         year: int,
@@ -69,6 +70,7 @@ async def fetch_year(
     Fetches data for a specific year from the API with retries and backoff
     Returns None on success or a string error message on failure
     """
+
     endpoint = f"{config.api_url}/data/all/{year}"
     filename = f"data_all_{year}.json"
     filepath = config.raw_data_dir / filename
@@ -90,7 +92,7 @@ async def fetch_year(
                         timeout=timeout
                 ) as resp:
 
-                    # Handle ALL Server Errors (5xx) and Rate Limiting (429) for retrying
+                    # Handles ALL Server Errors (5xx) and Rate Limiting (429) for retrying
                     if resp.status == 429 or 500 <= resp.status <= 599:
                         logging.warning(
                             f"Year {year}: attempt {attempt}/{config.max_retries}, Status {resp.status}, waiting {delay:.1f}s…"
@@ -99,7 +101,7 @@ async def fetch_year(
                         delay = increase_delay(delay)
                         continue  # Go to next attempt
 
-                    # Handle permanent errors
+                    # Handles permanent errors
                     if 400 <= resp.status < 500:
                         resp.raise_for_status()  # Will be caught by the outer exception handler
 
@@ -110,17 +112,17 @@ async def fetch_year(
                         save_local(data, filepath)
                         logging.info(f"Fetched {year} successfully")
 
-                        # Add sleep after success in order to not stress the API
+                        # Adds sleep after success in order to not stress the API
                         await asyncio.sleep(random.uniform(0.1, 0.5))
                         return None  # Success
 
         except aiohttp.ClientResponseError as e:
-            # Catch specific errors like 404, 401, etc. They are permanent failures
+            # Catches specific errors like 404, 401, etc. They are permanent failures
             logging.error(f"Year {year}: Permanent HTTP Error: {e.status} - {e.message}. Stopping retries")
             return f"Permanent HTTP Error: {e.status} - {e.message}"
 
         except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
-            # Catch transient network/decoding errors
+            # Catches transient network/decoding errors
             logging.warning(
                 f"Year {year}: attempt {attempt}/{config.max_retries} failed: {type(e).__name__} - {e}, retrying in {delay:.1f}s"
             )
@@ -135,23 +137,21 @@ async def fetch_year(
 async def main():
     """Main function to orchestrate the asynchronous fetching process"""
 
-    # Load environment variables
+    # Loads environment variables
     load_dotenv()
     api_url = os.getenv("API_URL")
     api_key = os.getenv("API_KEY")
 
-    # Initialize configuration
+    # Initializes configuration
     if not api_url or not api_key:
         raise ValueError(f"API_URL or API_KEY not set in environment")
 
     config = APIConfig(api_url=api_url, api_key=api_key)
-
-    # Calculate BasicAuth once
-    global_auth_header = aiohttp.BasicAuth("any-user", config.api_key)
-
-    # Setup logging and directories
     setup_logging(config.log_file)
     config.raw_data_dir.mkdir(parents=True, exist_ok=True)
+
+    # Calculates BasicAuth once
+    global_auth_header = aiohttp.BasicAuth("any-user", config.api_key)
 
     logging.info(f"Starting extraction for years {config.years_to_fetch[0]} to {config.years_to_fetch[-1]}...")
     logging.info(f"Max concurrent connections: {config.max_concurrent}")
@@ -163,20 +163,20 @@ async def main():
     async with aiohttp.ClientSession(auth=global_auth_header) as session:
         tasks = [fetch_year(session, year, semaphore, config) for year in config.years_to_fetch]
 
-        # Gather results and exceptions
+        # Gathers results and exceptions
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
             if isinstance(result, str):
                 failures += 1
-            # Handle unexpected exceptions during gather
+            # Handles unexpected exceptions during gather
             elif isinstance(result, Exception):
                 logging.critical(f"Unhandled exception during task gathering: {result}")
                 failures += 1
 
-    # Final summary
+    # Summary
     successes = total_years - failures
-    logging.info(f"\n--- Extraction Summary ---")
+    logging.info(f"\n--- Summary ---")
     logging.info(f"Total years targeted: {total_years}")
     logging.info(f"Successful fetches (or skipped): {successes}")
     logging.info(f"Failed fetches: {failures}")
@@ -189,6 +189,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("Script interrupted by user (KeyboardInterrupt). Exiting gracefully")
+        logging.info("Script interrupted by user (KeyboardInterrupt). Exiting...")
     except Exception as e:
         logging.critical(f"A critical, unhandled error occurred: {e}")

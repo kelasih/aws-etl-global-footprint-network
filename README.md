@@ -33,15 +33,15 @@ The project is built with the following technologies for local testing:
 
 ```
 .
+├── local_test
+│   ├── requirements.txt
+│   └── scripts
+│       ├── local_data_extraction.py
+│       └── local_data_ingestion.py
 ├── mkt_returns
 │   ├── calendar.csv
 │   ├── data.csv
 │   └── sql_test_mkt_returns.ipynb
-├── scripts
-│   └── local_test
-│       ├── local_data_extraction.py
-│       ├── local_data_ingestion.py
-│       └── requirements.txt
 ├── .env.example
 ├── .gitignore
 ├── LICENSE
